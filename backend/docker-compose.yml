@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  fastapi:
+    build: .
+    container_name: sci-find-backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - elasticsearch
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.7.0
+    container_name: sci-find-elasticsearch
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+
+  nlp-service:
+    image: huggingface/transformers-pytorch-cpu:latest
+    container_name: sci-find-nlp
+    environment:
+      - TRANSFORMERS_CACHE=/cache
+    volumes:
+      - ./cache:/cache
+    depends_on:
+      - elasticsearch
