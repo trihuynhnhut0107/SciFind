@@ -5,7 +5,10 @@ from pydantic import BaseModel
 app = FastAPI()
 
 # Initialize Elasticsearch client
-es = Elasticsearch(hosts=["http://localhost:9200"])
+es = Elasticsearch(
+    hosts=["http://elasticsearch:9200"],
+    headers={"Accept": "application/vnd.elasticsearch+json;compatible-with=8"}
+)
 
 @app.get("/")
 def read_root():
@@ -14,11 +17,9 @@ def read_root():
 @app.get("/test-elasticsearch")
 def test_elasticsearch():
     try:
-        # Check if Elasticsearch is reachable
-        if es.ping():
-            return {"message": "Elasticsearch is connected!"}
-        else:
-            return {"message": "Elasticsearch connection failed."}
+        # Perform a health check on Elasticsearch
+        health = es.cluster.health()
+        return {"status": "Elasticsearch is connected!", "health": health}
     except Exception as e:
         return {"error": str(e)}
 
