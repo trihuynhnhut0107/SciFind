@@ -7,7 +7,10 @@ app = FastAPI()
 # Initialize Elasticsearch client
 es = Elasticsearch(
     hosts=["http://elasticsearch:9200"],
-    headers={"Accept": "application/vnd.elasticsearch+json;compatible-with=8"}
+    headers={
+        "Accept": "application/vnd.elasticsearch+json;compatible-with=8",
+        "Content-Type": "application/vnd.elasticsearch+json;compatible-with=8"
+    }
 )
 
 @app.get("/")
