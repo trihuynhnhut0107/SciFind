@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-elasticsearch==8.7.0
-transformers
-pandas
-beautifulsoup4
-requests
