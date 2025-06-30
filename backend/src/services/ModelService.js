@@ -3,7 +3,7 @@ const axios = require("axios");
 class ModelService {
   constructor() {
     this.defaultEndpoint =
-      process.env.MODEL_ENDPOINT || "http://localhost:8000/search";
+      process.env.MODEL_ENDPOINT || "https://mmlab.uit.edu.vn/quocanh2/search";
     this.timeout = parseInt(process.env.MODEL_TIMEOUT) || 30000;
   }
 
