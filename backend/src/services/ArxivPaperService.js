@@ -147,6 +147,8 @@ class ArxivPaperService {
         modelEndpoint
       );
 
+      console.log("Raw model result:", JSON.stringify(modelResult, null, 2));
+
       // Step 2: Build Elasticsearch query
       const esQuery = this.buildFilteredQuery(searchTerm, filters);
       const minScore = filters.minScore || 0;
@@ -155,35 +157,129 @@ class ArxivPaperService {
         { update_date: { order: "desc" } },
       ];
 
-      // Step 3: Execute Elasticsearch search
-      const esResults = await this.esService.advancedSearch({
-        index: this.indexName,
-        query: esQuery,
-        minScore,
-        size: 100,
-        sort,
-      });
+      let results;
 
-      let results = esResults;
-
-      // Step 4: Combine with model results if available
+      // Step 3: Use model results if available, otherwise fall back to Elasticsearch
       if (modelResult.success && modelResult.data.length > 0) {
-        const { modelIds, modelScores } = this.modelService.processModelResults(
-          modelResult.data
+        console.log(`Model returned ${modelResult.data.length} results`);
+
+        // Extract paper IDs from model results
+        const modelPaperIds = new Set();
+        modelResult.data.forEach((result) => {
+          if (result.file_path) {
+            // Extract filename without extension as paper ID
+            // let fileName = result.file_path
+            //   .split("/")
+            //   .pop()
+            //   .replace(/\.[^/.]+$/, "");
+
+            // // Remove version suffix (v1, v2, v3, etc.)
+            // fileName = fileName.replace(/v\d+$/, "");
+
+            modelPaperIds.add(result.file_path);
+          }
+        });
+
+        console.log(
+          `Extracted paper IDs from model:`,
+          Array.from(modelPaperIds)
         );
-        results = this.modelService.combineScores(
-          esResults,
-          modelIds,
-          modelScores
+
+        // Check if any filters are applied
+        const hasFilters =
+          (filters.categories && filters.categories.length > 0) ||
+          (filters.authors && filters.authors.length > 0) ||
+          filters.dateRange ||
+          filters.minScore;
+
+        let filteredResults = [];
+
+        if (hasFilters) {
+          console.log(
+            "Filters detected, applying Elasticsearch query with filters"
+          );
+
+          // Get Elasticsearch results with filters applied
+          const esResults = await this.esService.advancedSearch({
+            index: this.indexName,
+            query: esQuery,
+            minScore,
+            size: 1000, // Get more results to have a larger pool to filter from
+            sort,
+          });
+
+          console.log(`Elasticsearch returned ${esResults.length} results`);
+
+          // Filter ES results to only include papers that were returned by the model
+          filteredResults = esResults.filter((paper) => {
+            const paperId = paper.id || paper._id;
+            const isInModelResults = modelPaperIds.has(paperId);
+            if (isInModelResults) {
+              console.log(
+                `Paper ${paperId} found in both model and ES results`
+              );
+            }
+            return isInModelResults;
+          });
+        } else {
+          console.log(
+            "No filters applied, getting all model papers from Elasticsearch"
+          );
+
+          // No filters, just get all papers by ID from the model results
+          const modelPaperIdsArray = Array.from(modelPaperIds);
+          for (let paperId of modelPaperIdsArray) {
+            try {
+              const paper = await this.esService.getById(
+                this.indexName,
+                paperId
+              );
+              if (paper) {
+                filteredResults.push(paper);
+                console.log(`Found paper: ${paperId}`);
+              } else {
+                console.warn(`Paper not found in Elasticsearch: ${paperId}`);
+              }
+            } catch (error) {
+              console.warn(`Failed to get paper ${paperId}: ${error.message}`);
+            }
+          }
+        }
+
+        console.log(
+          `Found ${filteredResults.length} papers that match criteria`
         );
+
+        // Add model scores to the filtered results (maintain model ranking order)
+        const modelPapers = filteredResults.map((paper, index) => {
+          const modelScore =
+            (filteredResults.length - index) / filteredResults.length;
+          return {
+            ...paper,
+            modelScore,
+            combinedScore: modelScore,
+            score: modelScore,
+          };
+        });
+
+        results = modelPapers;
+      } else {
+        // Fall back to Elasticsearch search when model is not available
+        results = await this.esService.advancedSearch({
+          index: this.indexName,
+          query: esQuery,
+          minScore,
+          size: 100,
+          sort,
+        });
       }
 
-      // Step 5: Apply result limit
+      // Step 4: Apply result limit
       if (filters.maxResults) {
         results = results.slice(0, filters.maxResults);
       }
 
-      // Step 6: Format response
+      // Step 5: Format response
       return {
         total: results.length,
         searchTerm,
@@ -195,6 +291,62 @@ class ArxivPaperService {
     } catch (error) {
       throw new Error(`Enhanced search failed: ${error.message}`);
     }
+  }
+
+  /**
+   * Apply filters to results (used for model results)
+   */
+  applyFiltersToResults(results, filters = {}) {
+    let filteredResults = results;
+
+    // Apply category filters
+    if (filters.categories && filters.categories.length > 0) {
+      filteredResults = filteredResults.filter((result) => {
+        return (
+          result.categories &&
+          result.categories.some((category) =>
+            filters.categories.includes(category)
+          )
+        );
+      });
+    }
+
+    // Apply author filters
+    if (filters.authors && filters.authors.length > 0) {
+      filteredResults = filteredResults.filter((result) => {
+        const authors = result.authors_parsed || result.authors || [];
+        return authors.some((author) => filters.authors.includes(author));
+      });
+    }
+
+    // Apply date range filter
+    if (filters.dateRange) {
+      filteredResults = filteredResults.filter((result) => {
+        const updateDate = result.update_date;
+        if (!updateDate) return false;
+
+        const date = new Date(updateDate);
+        let passes = true;
+
+        if (filters.dateRange.from) {
+          passes = passes && date >= new Date(filters.dateRange.from);
+        }
+        if (filters.dateRange.to) {
+          passes = passes && date <= new Date(filters.dateRange.to);
+        }
+
+        return passes;
+      });
+    }
+
+    // Apply minimum score filter
+    if (filters.minScore) {
+      filteredResults = filteredResults.filter(
+        (result) => (result.score || 0) >= filters.minScore
+      );
+    }
+
+    return filteredResults;
   }
 
   /**

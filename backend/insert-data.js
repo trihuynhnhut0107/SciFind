@@ -6,7 +6,7 @@ const es = new Client({ node: "http://localhost:9200" });
 
 const INDEX_NAME = "arxiv-paper";
 const FILE_PATH = "D://Material//arxiv-metadata-oai-snapshot.json";
-const BATCH_SIZE = 500;
+const BATCH_SIZE = 1000;
 
 async function createIndexIfNotExists() {
   const exists = await es.indices.exists({ index: INDEX_NAME });
