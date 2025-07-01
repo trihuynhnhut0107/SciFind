@@ -1,47 +1,55 @@
 <template>
-  <div class="h-screen bg-bg-card flex flex-col px-4 py-2">
+  <div class="h-screen bg-bg-card flex flex-col py-2">
     <!-- Header Bar -->
-    <header class="w-full flex items-center text-xs space-x-2 text-button-text">
-      <button
-        class="font-bold rounded-4xl bg-button-bg px-8 py-1 hover:bg-button-bg-hover hover:cursor-pointer">
+    <header class="w-full flex items-center text-xs space-x-2 text-button-text px-4">
+      <h1 class="text-5xl font-extrabold text-indigo-600
+        hover:text-indigo-500 
+        transform hover:scale-105 
+        transition duration-200">
         SciFind
-      </button>
+      </h1>
       <button
-        class="font-bold rounded-4xl bg-white px-4 py-1 hover:bg-button-bg-hover hover:cursor-pointer">
+        class="font-bold rounded-4xl bg-white px-6 py-2 hover:bg-button-bg-hover hover:cursor-pointer">
         All +
       </button>
       <button
-        class="font-bold rounded-4xl bg-white px-4 py-1 hover:bg-button-bg-hover hover:cursor-pointer">
+        class="font-bold rounded-4xl bg-white px-6 py-2 hover:bg-button-bg-hover hover:cursor-pointer">
         News +
       </button>
       <button
-        class="font-bold rounded-4xl bg-white px-4 py-1 hover:bg-button-bg-hover hover:cursor-pointer">
+        class="font-bold rounded-4xl bg-white px-6 py-2 hover:bg-button-bg-hover hover:cursor-pointer">
         Exclusives +
       </button>
       <button
-        class="font-bold rounded-4xl bg-white px-4 py-1 hover:bg-button-bg-hover hover:cursor-pointer">
+        class="font-bold rounded-4xl bg-white px-6 py-2 hover:bg-button-bg-hover hover:cursor-pointer">
         Guides +
       </button>
       <button
-        class="font-bold rounded-4xl bg-white px-4 py-1 hover:bg-button-bg-hover hover:cursor-pointer">
-        Recommend +
+        class="font-bold rounded-4xl bg-white px-6 py-2 hover:bg-button-bg-hover hover:cursor-pointer">
+        Language
       </button>
     </header>
     <!-- Main Content -->
-    <div class="flex flex-row flex-1 p-4 h-full">
-      <div class="w-2/3 flex flex-col h-full">
+    <main
+      class="flex-1 flex flex-row py-4 space-x-8 overflow-y-auto"
+    >
+      <!-- Best of Week on the left -->
+      <div class="w-2/5 pl-4">
         <BestOfWeek :news-list="newsPanelContent" />
       </div>
-      <div
-        class="w-1/3 max-h-[90vh] bg-bg-main p-4 rounded-4xl border border-accent">
-        <div class="h-1/6"><SearchBar /></div>
-        <div class="h-5/6 overflow-y-auto">
-          <ArticlePreviewPanel
-            @article-click="navigateToArticle"
-            :news-content="newsPanelContent" />
+
+      <!-- SearchBar and PreviewPanel in the center -->
+      <div class="w-3/5">
+        <div class="max-w-2xl mx-auto">
+          <div class="bg-white p-6 rounded-4xl shadow-lg space-y-6">
+            <SearchBar />
+            <ArticlePreviewPanel
+              @article-click="navigateToArticle"
+              :news-content="newsPanelContent" />
+          </div>
         </div>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 

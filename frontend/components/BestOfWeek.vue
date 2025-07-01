@@ -1,5 +1,5 @@
 <template>
-  <div class="best-of-week bg-bg-card p-4 rounded-4xl">
+  <div class="best-of-week bg-bg-card p-4 rounded-4xl w-full max-w-[900px] h-[600px] mx-auto">
     <h2
       class="text-lg w-fit font-bold mb-2 border-l-primary border-l-2 px-2 bg-gradient-to-r from-accent via-bg-card to-bg-card">
       BEST OF THE WEEK
@@ -30,14 +30,30 @@
     <div
       class="remaining-news mt-6 flex-shrink-0 transition-all duration-500"
       style="min-height: 200px">
-      <h3 class="text-lg font-bold mb-4">Recommended</h3>
+      <h3 class="text-lg font-bold mb-4">Latest</h3>
       <div class="grid grid-cols-3 gap-4">
         <div
           v-for="(news, index) in remainingNews"
           :key="index"
-          class="flex items-center space-x-4">
+          class="flex flex-col space-y-2">
           <img
-            class="w-16 h-16 rounded-lg object-cover"
+            class="w-full h-24 rounded-lg object-cover"
+            :src="news.image"
+            alt="News Image" />
+          <div>
+            <h4 class="text-sm font-semibold">{{ news.title }}</h4>
+            <p class="text-xs text-gray-500">By {{ news.author }}</p>
+          </div>
+        </div>
+      </div>
+      <h3 class="text-lg font-bold mb-4 mt-4">Recommended</h3>
+      <div class="grid grid-cols-3 gap-4">
+        <div
+          v-for="(news, index) in remainingNews"
+          :key="index"
+          class="flex flex-col space-y-2">
+          <img
+            class="w-full h-24 rounded-lg object-cover"
             :src="news.image"
             alt="News Image" />
           <div>

@@ -10,7 +10,8 @@
       <!-- Gradient Divider: Skip last -->
       <div
         v-if="idx < newsContent.length - 1"
-        class="h-[1.5px] w-full bg-gradient-to-r from-transparent via-text-secondary to-transparent my-2"></div>
+        class="h-[1.5px] w-full bg-gradient-to-r from-transparent via-text-secondary to-transparent my-2">
+      </div>
     </template>
   </div>
 </template>
