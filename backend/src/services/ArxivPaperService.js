@@ -168,15 +168,15 @@ class ArxivPaperService {
         modelResult.data.forEach((result) => {
           if (result.file_path) {
             // Extract filename without extension as paper ID
-            // let fileName = result.file_path
-            //   .split("/")
-            //   .pop()
-            //   .replace(/\.[^/.]+$/, "");
+            let fileName = result.file_path
+              .split("/")
+              .pop()
+              .replace(/\.[^/.]+$/, "");
 
-            // // Remove version suffix (v1, v2, v3, etc.)
-            // fileName = fileName.replace(/v\d+$/, "");
+            // Remove version suffix (v1, v2, v3, etc.)
+            fileName = fileName.replace(/v\d+$/, "");
 
-            modelPaperIds.add(result.file_path);
+            modelPaperIds.add(fileName);
           }
         });
 
@@ -210,38 +210,85 @@ class ArxivPaperService {
 
           console.log(`Elasticsearch returned ${esResults.length} results`);
 
-          // Filter ES results to only include papers that were returned by the model
-          filteredResults = esResults.filter((paper) => {
-            const paperId = paper.id || paper._id;
-            const isInModelResults = modelPaperIds.has(paperId);
-            if (isInModelResults) {
-              console.log(
-                `Paper ${paperId} found in both model and ES results`
+          // Filter ES results using wildcard queries for each model paper ID
+          for (let modelId of modelPaperIds) {
+            const wildcardQuery = {
+              wildcard: {
+                id: {
+                  value: `*${modelId}*`,
+                },
+              },
+            };
+
+            const matchingPapers = await this.esService.advancedSearch({
+              index: this.indexName,
+              query: wildcardQuery,
+              size: 1000,
+            });
+
+            // Add papers that also match the original filters
+            matchingPapers.forEach((paper) => {
+              const isInFilteredResults = esResults.some(
+                (esResult) =>
+                  (esResult.id || esResult._id) === (paper.id || paper._id)
               );
-            }
-            return isInModelResults;
-          });
+
+              if (
+                isInFilteredResults &&
+                !filteredResults.some(
+                  (existing) =>
+                    (existing.id || existing._id) === (paper.id || paper._id)
+                )
+              ) {
+                filteredResults.push(paper);
+                console.log(
+                  `Paper ${
+                    paper.id || paper._id
+                  } matches model result pattern and filters`
+                );
+              }
+            });
+          }
         } else {
           console.log(
             "No filters applied, getting all model papers from Elasticsearch"
           );
 
-          // No filters, just get all papers by ID from the model results
+          // No filters, use wildcard queries to find papers by model IDs
           const modelPaperIdsArray = Array.from(modelPaperIds);
-          for (let paperId of modelPaperIdsArray) {
+
+          for (let modelId of modelPaperIdsArray) {
+            const wildcardQuery = {
+              wildcard: {
+                id: {
+                  value: `*${modelId}*`,
+                },
+              },
+            };
+
             try {
-              const paper = await this.esService.getById(
-                this.indexName,
-                paperId
-              );
-              if (paper) {
-                filteredResults.push(paper);
-                console.log(`Found paper: ${paperId}`);
-              } else {
-                console.warn(`Paper not found in Elasticsearch: ${paperId}`);
-              }
+              const matchingPapers = await this.esService.advancedSearch({
+                index: this.indexName,
+                query: wildcardQuery,
+                size: 1000,
+              });
+
+              matchingPapers.forEach((paper) => {
+                // Avoid duplicates
+                if (
+                  !filteredResults.some(
+                    (existing) =>
+                      (existing.id || existing._id) === (paper.id || paper._id)
+                  )
+                ) {
+                  filteredResults.push(paper);
+                  console.log(`Found paper: ${paper.id || paper._id}`);
+                }
+              });
             } catch (error) {
-              console.warn(`Failed to get paper ${paperId}: ${error.message}`);
+              console.warn(
+                `Failed to search for papers with ID pattern ${modelId}: ${error.message}`
+              );
             }
           }
         }
