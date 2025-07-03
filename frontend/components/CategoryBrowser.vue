@@ -1,6 +1,6 @@
 <template>
   <!-- Categories Browser -->
-  <div class="w-1/2 bg-white rounded-xl shadow-lg p-4 flex flex-col">
+  <div class="w-full bg-white rounded-xl shadow-lg p-4 flex flex-col">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-base font-semibold text-text-main">Browse Categories</h3>
       <div class="flex items-center gap-3">

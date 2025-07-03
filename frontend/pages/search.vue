@@ -11,15 +11,15 @@
     <div class="max-w-7xl mx-auto px-6 py-6">
       <!-- Search Info and Filters -->
       <div class="flex flex-col lg:flex-row gap-6">
-        <!-- Filters Sidebar -->
-        <SearchFilters
-          :selected-categories="selectedCategories"
-          :date-filter="dateFilter"
-          :sort-by="sortBy"
-          :available-categories="availableCategories"
-          @toggle-category="toggleCategory"
-          @update:date-filter="dateFilter = $event"
-          @update:sort-by="sortBy = $event" />
+        <!-- Category Browser -->
+        <div class="lg:w-1/3">
+          <CategoryBrowser
+            :selected-categories="selectedCategories"
+            :expanded-categories="expandedCategories"
+            @toggle-category="toggleCategory"
+            @clear-all="clearAllCategories"
+            @toggle-category-group="expandedCategories = $event" />
+        </div>
 
         <!-- Results Area -->
         <SearchResults
@@ -42,6 +42,7 @@
 
 <script setup>
 import { ref, onMounted, watch } from "vue";
+import CategoryBrowser from "~/components/CategoryBrowser.vue";
 
 // Use no layout since we have our own header
 definePageMeta({
@@ -67,18 +68,8 @@ const totalPages = ref(1);
 
 // Filters
 const selectedCategories = ref([]);
-const dateFilter = ref("any");
+const expandedCategories = ref([]);
 const sortBy = ref("relevance");
-
-// Available categories (this would come from API)
-const availableCategories = ref([
-  { id: "cs.AI", name: "Artificial Intelligence" },
-  { id: "cs.CV", name: "Computer Vision" },
-  { id: "cs.LG", name: "Machine Learning" },
-  { id: "cs.CL", name: "Computational Linguistics" },
-  { id: "physics.optics", name: "Optics" },
-  { id: "math.NA", name: "Numerical Analysis" },
-]);
 
 // Methods
 const performSearch = async () => {
@@ -103,7 +94,6 @@ const performSearch = async () => {
               searchTerm: searchQuery.value,
               filters: {
                 categories: selectedCategories.value,
-                dateFilter: dateFilter.value,
                 sortBy: sortBy.value,
                 page: currentPage.value,
               },
@@ -155,6 +145,10 @@ const toggleCategory = (categoryId) => {
   }
 };
 
+const clearAllCategories = () => {
+  selectedCategories.value = [];
+};
+
 const openArxivAbstract = (arxivId) => {
   const url = `https://arxiv.org/abs/${arxivId}`;
   window.open(url, "_blank");
@@ -191,7 +185,7 @@ const changePage = (page) => {
 
 // Watch for filter changes
 watch(
-  [selectedCategories, dateFilter, sortBy],
+  [selectedCategories, sortBy],
   () => {
     if (currentQuery.value) {
       currentPage.value = 1;
