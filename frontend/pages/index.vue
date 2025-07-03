@@ -31,12 +31,14 @@
       </div>
 
       <!-- Right Column - Categories Browser -->
-      <CategoryBrowser
-        :selected-categories="selectedCategories"
-        :expanded-categories="expandedCategories"
-        @clear-all="clearAllFilters"
-        @toggle-category="toggleCategoryFilter"
-        @toggle-category-group="expandedCategories = $event" />
+      <div class="h-full w-1/2">
+        <CategoryBrowser
+          :selected-categories="selectedCategories"
+          :expanded-categories="expandedCategories"
+          @clear-all="clearAllFilters"
+          @toggle-category="toggleCategoryFilter"
+          @toggle-category-group="expandedCategories = $event" />
+      </div>
     </div>
   </div>
 </template>
