@@ -45,18 +45,48 @@ class ArxivPaperController extends BaseController {
   });
 
   /**
-   * Basic search
+   * Basic search with full feature support
    */
   basicSearch = this.asyncHandler(async (req, res) => {
-    const { searchTerm } = req.body;
+    const {
+      searchTerm,
+      filters = {},
+      page = 1,
+      limit = 10,
+      sortBy = "relevance",
+      sortOrder = "desc",
+    } = req.body;
 
     const missing = this.validateRequired(req.body, ["searchTerm"]);
     if (missing.length > 0) {
       return this.validationError(res, "Missing required fields", { missing });
     }
 
+    // Validate pagination parameters
+    const validatedPage = Math.max(1, parseInt(page));
+    const validatedLimit = Math.min(Math.max(1, parseInt(limit)), 100);
+
+    // Validate sort parameters
+    const validSortFields = ["relevance", "date", "title"];
+    const validSortOrders = ["asc", "desc"];
+    const validatedSortBy = validSortFields.includes(sortBy)
+      ? sortBy
+      : "relevance";
+    const validatedSortOrder = validSortOrders.includes(sortOrder)
+      ? sortOrder
+      : "desc";
+
     const sanitizedSearchTerm = this.sanitizeInput(searchTerm);
-    const results = await this.arxivService.basicSearch(sanitizedSearchTerm);
+    const sanitizedFilters = this.sanitizeInput(filters);
+
+    const results = await this.arxivService.basicSearch(
+      sanitizedSearchTerm,
+      sanitizedFilters,
+      validatedPage,
+      validatedLimit,
+      validatedSortBy,
+      validatedSortOrder
+    );
 
     this.success(res, results, "Search completed successfully");
   });
@@ -65,12 +95,34 @@ class ArxivPaperController extends BaseController {
    * Enhanced search with model integration
    */
   enhancedSearch = this.asyncHandler(async (req, res) => {
-    const { searchTerm, filters = {}, modelEndpoint } = req.body;
+    const {
+      searchTerm,
+      filters = {},
+      modelEndpoint,
+      page = 1,
+      limit = 10,
+      sortBy = "relevance",
+      sortOrder = "desc",
+    } = req.body;
 
     const missing = this.validateRequired(req.body, ["searchTerm"]);
     if (missing.length > 0) {
       return this.validationError(res, "Missing required fields", { missing });
     }
+
+    // Validate pagination parameters
+    const validatedPage = Math.max(1, parseInt(page));
+    const validatedLimit = Math.min(Math.max(1, parseInt(limit)), 100);
+
+    // Validate sort parameters
+    const validSortFields = ["relevance", "date", "title"];
+    const validSortOrders = ["asc", "desc"];
+    const validatedSortBy = validSortFields.includes(sortBy)
+      ? sortBy
+      : "relevance";
+    const validatedSortOrder = validSortOrders.includes(sortOrder)
+      ? sortOrder
+      : "desc";
 
     // Sanitize input
     const sanitizedData = this.sanitizeInput({
@@ -82,7 +134,11 @@ class ArxivPaperController extends BaseController {
     const results = await this.arxivService.enhancedSearch(
       sanitizedData.searchTerm,
       sanitizedData.filters,
-      sanitizedData.modelEndpoint
+      sanitizedData.modelEndpoint,
+      validatedPage,
+      validatedLimit,
+      validatedSortBy,
+      validatedSortOrder
     );
 
     this.success(res, results, "Enhanced search completed successfully");

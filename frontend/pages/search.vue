@@ -71,9 +71,40 @@ const selectedCategories = ref([]);
 const expandedCategories = ref([]);
 const sortBy = ref("relevance");
 
+// Computed property for debugging
+const debugState = computed(() => ({
+  searchQuery: searchQuery.value,
+  searchType: searchType.value,
+  selectedCategories: selectedCategories.value,
+  currentPage: currentPage.value,
+  routeQuery: route.query,
+}));
+
+// Utility function to update URL with current state
+const updateURL = async (replaceHistory = true) => {
+  const queryParams = {
+    q: searchQuery.value,
+    type: searchType.value,
+    page: currentPage.value,
+  };
+
+  if (selectedCategories.value.length > 0) {
+    queryParams.categories = selectedCategories.value.join(",");
+  }
+
+  const routerMethod = replaceHistory ? router.replace : router.push;
+
+  await routerMethod({
+    path: "/search",
+    query: queryParams,
+  });
+};
+
 // Methods
 const performSearch = async () => {
   if (!searchQuery.value.trim()) return;
+
+  console.log("🔍 Performing search with:", debugState.value);
 
   loading.value = true;
   error.value = "";
@@ -85,19 +116,23 @@ const performSearch = async () => {
         ? "http://localhost:8000/arxiv-paper/enhanced-search"
         : "http://localhost:8000/arxiv-paper/search";
 
+    const requestBody =
+      searchType.value === "enhanced"
+        ? {
+            searchTerm: searchQuery.value,
+            filters: { categories: selectedCategories.value },
+          }
+        : {
+            searchTerm: searchQuery.value,
+            filters: { categories: selectedCategories.value },
+          };
+
+    console.log("Search request body:", requestBody);
+    console.log("Selected categories being sent:", selectedCategories.value);
+
     const response = await $fetch(endpoint, {
       method: "POST",
-      body:
-        searchType.value === "enhanced"
-          ? { searchTerm: searchQuery.value }
-          : {
-              searchTerm: searchQuery.value,
-              filters: {
-                categories: selectedCategories.value,
-                sortBy: sortBy.value,
-                page: currentPage.value,
-              },
-            },
+      body: requestBody,
     });
 
     console.log("API Response:", response);
@@ -114,14 +149,7 @@ const performSearch = async () => {
     totalPages.value = Math.ceil(totalResults.value / 10); // Assuming 10 per page
 
     // Update URL
-    await router.push({
-      path: "/search",
-      query: {
-        q: searchQuery.value,
-        type: searchType.value,
-        page: currentPage.value,
-      },
-    });
+    await updateURL();
   } catch (err) {
     console.error("Search error:", err);
     error.value = err.data?.message || err.message || "Failed to search papers";
@@ -136,17 +164,43 @@ const toggleSearchType = () => {
   searchType.value = searchType.value === "enhanced" ? "basic" : "enhanced";
 };
 
-const toggleCategory = (categoryId) => {
+const toggleCategory = async (category) => {
+  // Handle both category object and category ID
+  const categoryId = typeof category === "string" ? category : category.id;
+  console.log("Toggling category:", categoryId);
   const index = selectedCategories.value.indexOf(categoryId);
   if (index > -1) {
     selectedCategories.value.splice(index, 1);
   } else {
     selectedCategories.value.push(categoryId);
   }
+  console.log("Selected categories:", selectedCategories.value);
+
+  // Reset to first page when filters change
+  currentPage.value = 1;
+
+  // Update URL with new categories
+  await updateURL();
+
+  // Trigger search if we have a query
+  if (currentQuery.value) {
+    performSearch();
+  }
 };
 
-const clearAllCategories = () => {
+const clearAllCategories = async () => {
   selectedCategories.value = [];
+
+  // Reset to first page when filters change
+  currentPage.value = 1;
+
+  // Update URL to remove categories
+  await updateURL();
+
+  // Trigger search if we have a query
+  if (currentQuery.value) {
+    performSearch();
+  }
 };
 
 const openArxivAbstract = (arxivId) => {
@@ -183,12 +237,58 @@ const changePage = (page) => {
   performSearch();
 };
 
-// Watch for filter changes
+// Watch for sortBy changes only
 watch(
-  [selectedCategories, sortBy],
+  [sortBy],
   () => {
     if (currentQuery.value) {
       currentPage.value = 1;
+      performSearch();
+    }
+  },
+  { deep: true }
+);
+
+// Watch for route changes to handle direct URL navigation
+watch(
+  () => route.query,
+  (newQuery) => {
+    console.log("Route query changed:", newQuery);
+
+    // Update search query
+    if (newQuery.q && newQuery.q !== searchQuery.value) {
+      searchQuery.value = newQuery.q;
+      currentQuery.value = newQuery.q;
+    }
+
+    // Update search type
+    if (newQuery.type && newQuery.type !== searchType.value) {
+      searchType.value = newQuery.type;
+    }
+
+    // Update categories
+    const urlCategories = newQuery.categories
+      ? newQuery.categories.split(",").filter((cat) => cat.trim())
+      : newQuery.category
+      ? [newQuery.category]
+      : [];
+
+    if (
+      JSON.stringify(urlCategories) !== JSON.stringify(selectedCategories.value)
+    ) {
+      selectedCategories.value = urlCategories;
+    }
+
+    // Update page
+    if (newQuery.page) {
+      const newPage = parseInt(newQuery.page);
+      if (newPage !== currentPage.value) {
+        currentPage.value = newPage;
+      }
+    }
+
+    // Perform search if we have a query
+    if (searchQuery.value) {
       performSearch();
     }
   },
@@ -208,13 +308,28 @@ onMounted(() => {
     searchType.value = query.type;
   }
 
+  // Handle both single category and multiple categories
   if (query.category) {
     selectedCategories.value = [query.category];
+  }
+
+  if (query.categories) {
+    selectedCategories.value = query.categories
+      .split(",")
+      .filter((cat) => cat.trim());
   }
 
   if (query.page) {
     currentPage.value = parseInt(query.page);
   }
+
+  // Log the initialized state
+  console.log("Initialized from URL:", {
+    searchQuery: searchQuery.value,
+    searchType: searchType.value,
+    selectedCategories: selectedCategories.value,
+    currentPage: currentPage.value,
+  });
 
   // Perform search if we have a query
   if (searchQuery.value) {

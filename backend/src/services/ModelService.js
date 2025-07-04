@@ -81,9 +81,6 @@ class ModelService {
    * Process model results and extract identifiers
    */
   processModelResults(modelResults) {
-    console.log(`Processing ${modelResults.length} model results`);
-    console.log(`Sample model result:`, modelResults[0]);
-
     const modelIds = new Set();
     const modelScores = new Map();
 
@@ -100,8 +97,6 @@ class ModelService {
         resultId = fileName;
       }
 
-      console.log(`Result ${index}: resultId=${resultId}, original:`, result);
-
       if (resultId) {
         modelIds.add(resultId);
         // Use inverse of index as model score (first result gets highest score)
@@ -109,9 +104,6 @@ class ModelService {
         modelScores.set(resultId, score);
       }
     });
-
-    console.log(`Final modelIds:`, Array.from(modelIds));
-    console.log(`Final modelScores:`, modelScores);
 
     return { modelIds, modelScores };
   }

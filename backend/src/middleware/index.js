@@ -8,17 +8,12 @@ const requestLogger = (req, res, next) => {
   const { method, url, ip } = req;
 
   // Log request
-  console.log(`[${new Date().toISOString()}] ${method} ${url} - ${ip}`);
 
   // Override res.end to log response
   const originalEnd = res.end;
   res.end = function (chunk, encoding) {
     const duration = Date.now() - start;
     const { statusCode } = res;
-
-    console.log(
-      `[${new Date().toISOString()}] ${method} ${url} - ${statusCode} - ${duration}ms`
-    );
 
     originalEnd.call(this, chunk, encoding);
   };
