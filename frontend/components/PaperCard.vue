@@ -32,9 +32,18 @@
       </span>
     </div>
 
-    <p class="text-text-secondary mb-4 line-clamp-3">
+    <p
+      class="text-text-secondary mb-4"
+      :class="{ 'line-clamp-3': !showFullAbstract }">
       {{ paper.abstract }}
     </p>
+    <button
+      v-if="paper.abstract && paper.abstract.length > 0"
+      class="text-primary text-xs underline mb-2 hover:cursor-pointer focus:outline-none"
+      @click="showFullAbstract = !showFullAbstract"
+      type="button">
+      {{ showFullAbstract ? "Show less" : "Show more" }}
+    </button>
 
     <div class="flex items-center justify-between flex-wrap gap-2">
       <div class="flex items-center space-x-4">
@@ -79,6 +88,7 @@
 </template>
 
 <script setup>
+const showFullAbstract = ref(false);
 // Props
 const props = defineProps({
   paper: {

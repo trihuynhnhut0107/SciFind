@@ -81,12 +81,13 @@ class ElasticsearchService {
   /**
    * Advanced search with filters, sorting, and scoring
    */
-  async advancedSearch({ index, query, minScore, size = 100, sort }) {
+  async advancedSearch({ index, query, minScore, size = 100, from = 0, sort }) {
     try {
       const searchParams = {
         index,
         query,
         size,
+        from,
       };
 
       if (minScore) {
@@ -105,6 +106,21 @@ class ElasticsearchService {
       }));
     } catch (error) {
       throw new Error(`Advanced search failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Count documents matching query
+   */
+  async count(index, query) {
+    try {
+      const response = await this.client.count({
+        index,
+        query: query || { match_all: {} },
+      });
+      return { count: response.count };
+    } catch (error) {
+      throw new Error(`Count failed: ${error.message}`);
     }
   }
 
