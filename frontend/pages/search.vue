@@ -102,7 +102,13 @@ const updateURL = async (replaceHistory = true) => {
 
 // Methods
 const performSearch = async () => {
-  if (!searchQuery.value.trim()) return;
+  // Allow search with only categories for basic search, but require search term for enhanced search
+  if (
+    !searchQuery.value.trim() &&
+    (searchType.value === "enhanced" || selectedCategories.value.length === 0)
+  ) {
+    return;
+  }
 
   console.log("🔍 Performing search with:", debugState.value);
 
@@ -116,16 +122,28 @@ const performSearch = async () => {
         ? "http://localhost:8000/arxiv-paper/enhanced-search"
         : "http://localhost:8000/arxiv-paper/search";
 
-    const requestBody =
-      searchType.value === "enhanced"
-        ? {
-            searchTerm: searchQuery.value,
-            filters: { categories: selectedCategories.value },
-          }
-        : {
-            searchTerm: searchQuery.value,
-            filters: { categories: selectedCategories.value },
-          };
+    let requestBody;
+
+    if (searchType.value === "enhanced") {
+      // Enhanced search always requires a search term
+      requestBody = {
+        searchTerm: searchQuery.value,
+        filters: { categories: selectedCategories.value },
+      };
+    } else {
+      // Basic search can work with just categories or with search term + categories
+      if (searchQuery.value.trim()) {
+        requestBody = {
+          searchTerm: searchQuery.value,
+          filters: { categories: selectedCategories.value },
+        };
+      } else {
+        // Only categories, no search term
+        requestBody = {
+          filters: { categories: selectedCategories.value },
+        };
+      }
+    }
 
     console.log("Search request body:", requestBody);
     console.log("Selected categories being sent:", selectedCategories.value);
@@ -162,6 +180,12 @@ const performSearch = async () => {
 
 const toggleSearchType = () => {
   searchType.value = searchType.value === "enhanced" ? "basic" : "enhanced";
+  // Update the URL and perform search if we have a query
+  currentPage.value = 1;
+  updateURL();
+  if (searchQuery.value) {
+    performSearch();
+  }
 };
 
 const toggleCategory = async (category) => {
@@ -287,8 +311,11 @@ watch(
       }
     }
 
-    // Perform search if we have a query
-    if (searchQuery.value) {
+    // Perform search if we have a query or if we have categories for basic search
+    if (
+      searchQuery.value ||
+      (searchType.value === "basic" && selectedCategories.value.length > 0)
+    ) {
       performSearch();
     }
   },
@@ -331,8 +358,11 @@ onMounted(() => {
     currentPage: currentPage.value,
   });
 
-  // Perform search if we have a query
-  if (searchQuery.value) {
+  // Perform search if we have a query or if we have categories for basic search
+  if (
+    searchQuery.value ||
+    (searchType.value === "basic" && selectedCategories.value.length > 0)
+  ) {
     performSearch();
   }
 });

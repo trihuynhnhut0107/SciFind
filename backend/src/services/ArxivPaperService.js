@@ -149,23 +149,26 @@ class ArxivPaperService {
   buildFilteredQuery(searchTerm, filters = {}) {
     const query = {
       bool: {
-        must: [
-          {
-            multi_match: {
-              query: searchTerm,
-              fields: [
-                "title^2",
-                "abstract^1.5",
-                "authors_parsed",
-                "categories",
-              ],
-              fuzziness: "AUTO",
-            },
-          },
-        ],
+        must: [],
         filter: [],
       },
     };
+
+    // Only add search term if it exists and is not empty
+    if (searchTerm && searchTerm.trim()) {
+      query.bool.must.push({
+        multi_match: {
+          query: searchTerm,
+          fields: ["title^2", "abstract^1.5", "authors_parsed", "categories"],
+          fuzziness: "AUTO",
+        },
+      });
+    } else {
+      // If no search term, match all documents
+      query.bool.must.push({
+        match_all: {},
+      });
+    }
 
     // Apply category filters
     if (filters.categories && filters.categories.length > 0) {

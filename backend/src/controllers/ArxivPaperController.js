@@ -57,10 +57,10 @@ class ArxivPaperController extends BaseController {
       sortOrder = "desc",
     } = req.body;
 
-    const missing = this.validateRequired(req.body, ["searchTerm"]);
-    if (missing.length > 0) {
-      return this.validationError(res, "Missing required fields", { missing });
-    }
+    // const missing = this.validateRequired(req.body, ["searchTerm"]);
+    // if (missing.length > 0) {
+    //   return this.validationError(res, "Missing required fields", { missing });
+    // }
 
     // Validate pagination parameters
     const validatedPage = Math.max(1, parseInt(page));
